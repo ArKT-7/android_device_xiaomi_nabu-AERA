@@ -1,0 +1,20 @@
+diff --git /build/make/core/Makefile /build/make/core/Makefile
+index 738ce90..5f68a62 100644
+--- /build/make/core/Makefile
++++ /build/make/core/Makefile
+@@ -2780,6 +2780,15 @@ endif
+ 
+ INTERNAL_RECOVERYIMAGE_ARGS := --ramdisk $(recovery_ramdisk)
+ 
++#preserve kernel cmdline for recovery-as-boot devices
++ifeq ($(BOARD_USES_RECOVERY_AS_BOOT),true)
++ifneq ($(BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE),true)
++ifdef INTERNAL_KERNEL_CMDLINE
++INTERNAL_RECOVERYIMAGE_ARGS += --cmdline "$(INTERNAL_KERNEL_CMDLINE)"
++endif
++endif
++endif
++
+ ifneq (truetrue,$(strip $(BUILDING_VENDOR_BOOT_IMAGE))$(strip $(BOARD_USES_RECOVERY_AS_BOOT)))
+ INTERNAL_RECOVERYIMAGE_ARGS += $(addprefix --second ,$(INSTALLED_2NDBOOTLOADER_TARGET))
+ # Assumes this has already been stripped
