@@ -1,0 +1,73 @@
+#!/system/bin/sh
+# Copyright (C) 2026 AERA Recovery Project contributors
+# SPDX-License-Identifier: Apache-2.0
+# Initializes WiFi driver and firmware
+
+# set up library path so binaries can find dependencies
+export PATH=/system/bin:/sbin:/vendor/bin
+export LD_LIBRARY_PATH=/system/lib64:/vendor/lib64
+
+# if wlan0 is already up and active, we are good to go
+if [ -d /sys/class/net/wlan0 ]; then
+    /sbin/busybox ip link set wlan0 up 2>/dev/null
+    exit 0
+fi
+
+# wait for vendor firmware mount to become available (up to 10 secnods)
+i=0
+while [ ! -d /vendor/firmware_mnt/image ] && [ $i -lt 100 ]; do
+    sleep 0.1
+    i=$((i+1))
+done
+
+# fail if firmware mount never showed up
+if [ ! -d /vendor/firmware_mnt/image ]; then
+    exit 1
+fi
+
+# restart related daemons if pd_mapper is already running
+if [ "$(getprop init.svc.vendor.pd_mapper)" = "running" ]; then
+    for s in rmt_storage tftp_server cnss-daemon per_proxy per_mgr pd_mapper; do
+        stop vendor.$s
+    done
+    sleep 0.2
+fi
+
+# create temporary directories for wifi control and calibration files
+mkdir -p /tmp/vendor/wifi/sockets
+chmod 0777 /tmp/vendor /tmp/vendor/wifi /tmp/vendor/wifi/sockets
+rm -f /tmp/vendor/wifi/sockets/cnss_user_server /tmp/vendor/wifi/sockets/cnss_user_client
+
+# fire up storage/IPC daemons
+start vendor.qrtr-ns;      sleep 0.05
+start vendor.pd_mapper;    sleep 0.1
+start vendor.rmt_storage;  sleep 0.1
+start vendor.tftp_server;  sleep 0.1
+start vendor.per_mgr;      sleep 0.15
+start vendor.per_proxy;    sleep 0.1
+start vendor.cnss-daemon;  sleep 0.1
+
+# trigger wifi power on sequence if interface is missing but device node exists
+if [ ! -d /sys/class/net/wlan0 ] && [ -c /dev/wlan ]; then
+    for t in 1 2 3; do
+        ( echo ON > /dev/wlan ) 2>/dev/null &
+        for j in $(seq 1 10); do
+            [ -d /sys/class/net/wlan0 ] && break
+            sleep 0.2
+        done
+        [ -d /sys/class/net/wlan0 ] && break
+        sleep 0.5
+    done
+fi
+
+# wait for wlan0 interface to appear, then bring it up
+for i in $(seq 1 20); do
+    if [ -d /sys/class/net/wlan0 ]; then
+        /sbin/busybox ip link set wlan0 up 2>/dev/null
+        exit 0
+    fi
+    sleep 0.25
+done
+
+# exit with error if wlan0 never come up
+exit 1

@@ -1,0 +1,139 @@
+on fs
+    mkdir /vendor/firmware_mnt 0771 system system
+    wait /dev/block/bootdevice/by-name/modem${ro.boot.slot_suffix} 5
+    mount vfat /dev/block/bootdevice/by-name/modem${ro.boot.slot_suffix} /vendor/firmware_mnt ro nosuid nodev shortname=lower,uid=1000,gid=1000,dmask=0000,fmask=0111
+
+    mkdir /tmp/recovery 0775 root root
+    mkdir /tmp/recovery/sockets 0777 wifi wifi
+    mkdir /tmp/vendor 0777 root root
+    mkdir /tmp/vendor/wifi 0777 wifi wifi
+    mkdir /tmp/vendor/wifi/sockets 0777 wifi wifi
+
+    mkdir /mnt/vendor 0755 root root
+    mkdir /tmp/persist 0777 root root
+    mkdir /tmp/persist/data 0777 system system
+    mkdir /tmp/persist/rfs 0777 root root
+    mkdir /tmp/persist/rfs/shared 0777 root root
+    mkdir /tmp/persist/rfs/msm 0777 root root
+    mkdir /tmp/persist/rfs/msm/mpss 0777 root root
+    mkdir /tmp/persist/rfs/msm/adsp 0777 root root
+    mkdir /tmp/persist/rfs/msm/slpi 0777 root root
+    mkdir /tmp/persist/rfs/msm/cdsp 0777 root root
+    mkdir /tmp/persist/rfs/mdm 0777 root root
+    mkdir /tmp/persist/rfs/mdm/mpss 0777 root root
+    mkdir /tmp/persist/rfs/mdm/adsp 0777 root root
+    mkdir /tmp/persist/rfs/mdm/slpi 0777 root root
+    mkdir /tmp/persist/rfs/mdm/tn 0777 root root
+    mkdir /tmp/persist/rfs/mdm/cdsp 0777 root root
+    mkdir /tmp/persist/rfs/apq 0777 root root
+    mkdir /tmp/persist/rfs/apq/gnss 0777 root root
+    mkdir /tmp/persist/hlos_rfs 0777 root root
+    mkdir /tmp/persist/hlos_rfs/shared 0777 root root
+    symlink /tmp/persist /mnt/vendor/persist
+
+    mkdir /tmp/rfs 0777 root root
+    mkdir /tmp/rfs/readwrite 0777 root root
+    mkdir /tmp/rfs/shared 0777 root root
+    mkdir /tmp/rfs/hlos 0777 root root
+    mkdir /tmp/rfs/ramdumps 0777 root root
+    mkdir /vendor/rfs 0777 root root
+    mkdir /vendor/rfs/msm 0777 root root
+    mkdir /vendor/rfs/msm/mpss 0777 root root
+    mkdir /vendor/rfs/msm/mpss/readonly 0777 root root
+    mkdir /vendor/rfs/msm/mpss/readonly/vendor 0777 root root
+    symlink /vendor/firmware_mnt /vendor/rfs/msm/mpss/readonly/firmware
+    symlink /vendor/firmware_mnt /vendor/rfs/msm/mpss/readonly/vendor/firmware
+    symlink /tmp/rfs/readwrite /vendor/rfs/msm/mpss/readwrite
+    symlink /tmp/rfs/shared /vendor/rfs/msm/mpss/shared
+    symlink /tmp/rfs/hlos /vendor/rfs/msm/mpss/hlos
+    symlink /tmp/rfs/ramdumps /vendor/rfs/msm/mpss/ramdumps
+
+on boot
+    start vendor.qcom-wifi-sh
+
+on property:sys.aera.wlan.up=1
+    write /dev/kmsg "aera-wifi: sys.aera.wlan.up=1 received"
+    setprop sys.aera.wlan.up 0
+    start vendor.qcom-wifi-sh
+    start wpa_supplicant
+
+on property:sys.powerctl=*
+    stop wpa_supplicant
+    stop vendor.cnss-daemon
+    stop vendor.per_proxy
+    stop vendor.per_mgr
+    stop vendor.tftp_server
+
+service vendor.qcom-wifi-sh /system/bin/qcom_wifi_init
+    class late_start
+    user root
+    group root system
+    disabled
+    oneshot
+    seclabel u:r:recovery:s0
+
+service vendor.qrtr-ns /system/bin/qrtr-ns -f
+    class core
+    user root
+    group root
+    setenv LD_LIBRARY_PATH /system/lib64:/vendor/lib64
+    disabled
+    seclabel u:r:recovery:s0
+
+service vendor.pd_mapper /system/bin/pd-mapper
+    class core
+    user system
+    group system
+    setenv LD_LIBRARY_PATH /system/lib64:/vendor/lib64
+    disabled
+    seclabel u:r:recovery:s0
+
+service vendor.tftp_server /system/bin/tftp_server
+    class core
+    user root
+    group root system
+    setenv LD_LIBRARY_PATH /system/lib64:/vendor/lib64
+    disabled
+    seclabel u:r:recovery:s0
+
+service vendor.rmt_storage /system/bin/rmt_storage
+    class core
+    user root
+    group root system
+    shutdown critical
+    ioprio rt 0
+    setenv LD_LIBRARY_PATH /system/lib64:/vendor/lib64
+    disabled
+    seclabel u:r:recovery:s0
+
+service vendor.per_mgr /system/bin/pm-service
+    class core
+    user system
+    group system
+    ioprio rt 4
+    setenv LD_LIBRARY_PATH /system/lib64:/vendor/lib64
+    disabled
+    seclabel u:r:recovery:s0
+
+service vendor.per_proxy /system/bin/pm-proxy
+    class core
+    user system
+    group system
+    setenv LD_LIBRARY_PATH /system/lib64:/vendor/lib64
+    disabled
+    seclabel u:r:recovery:s0
+
+service vendor.cnss-daemon /system/bin/cnss-daemon -n -l
+    class late_start
+    user root
+    group system inet net_admin wifi
+    setenv LD_LIBRARY_PATH /system/lib64:/vendor/lib64
+    disabled
+    seclabel u:r:recovery:s0
+
+service wpa_supplicant /system/bin/wpa_supplicant_wrapper
+    user root
+    group root wifi
+    disabled
+    oneshot
+    seclabel u:r:recovery:s0

@@ -1,0 +1,30 @@
+#!/system/bin/sh
+# Copyright (C) 2026 AERA Recovery Project contributors
+# SPDX-License-Identifier: Apache-2.0
+# Wrapper for wpa_supplicant that ensures the WiFi interface is available before starting the supplicant
+
+export PATH=/system/bin:/sbin:/vendor/bin
+export LD_LIBRARY_PATH=/system/lib64:/vendor/lib64
+# locate the wpa_supplicant config file
+conf=/system/etc/wifi/wpa_supplicant.conf
+
+# kick off wifi startup script if intrface is missing and service isn't running yet
+if [ ! -d /sys/class/net/wlan0 ] && [ "$(getprop init.svc.vendor.qcom-wifi-sh)" != "running" ]; then
+    setprop ctl.start vendor.qcom-wifi-sh
+fi
+
+# wait for wlan0 interface to show up (up to 30 seconds)
+for i in $(seq 1 60); do
+    [ -d /sys/class/net/wlan0 ] && break
+    sleep 0.5
+done
+
+# abort if interface failed to appear
+if [ ! -d /sys/class/net/wlan0 ]; then
+    exit 1
+fi
+
+# bring interface up, clean old sockets, and launch suppllicant
+/sbin/busybox ip link set wlan0 up 2>/dev/null
+rm -f /tmp/recovery/sockets/wlan0
+exec /system/bin/wpa_supplicant -Dnl80211 -iwlan0 -c"$conf" -O/tmp/recovery/sockets
