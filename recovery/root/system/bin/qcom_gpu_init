@@ -1,0 +1,65 @@
+#!/system/bin/sh
+# Copyright (C) 2026 AERA Recovery Project contributors
+# SPDX-License-Identifier: Apache-2.0
+# Initializes adreno GPU and Gralloc environment from /cust partition
+
+export PATH=/system/bin:/sbin:/vendor/bin
+
+if [ ! -d /cust/gpu ]; then
+    exit 0
+fi
+
+# create necessary directory structures
+mkdir -p /vendor/bin/hw /vendor/lib64/egl /vendor/lib64/hw /system/lib64 /vendor/firmware
+
+# symlink GPU Firmware
+if [ -d /cust/gpu/firmware ]; then
+    for fw in /cust/gpu/firmware/*; do
+        [ -f "$fw" ] || continue
+        file_name="${fw##*/}"
+        ln -sf "$fw" "/vendor/firmware/$file_name"
+    done
+fi
+
+# setup Allocator binary
+alloc_svc="/cust/gpu/bin/hw/vendor.qti.hardware.display.allocator-service"
+if [ -f "$alloc_svc" ]; then
+    ln -sf "$alloc_svc" /vendor/bin/hw/
+    chmod 0755 "$alloc_svc"
+fi
+
+# function to safely link libs
+link_libs() {
+    local src=$1
+    local dest=$2
+    [ -d "$src" ] || return 0
+    for lib in "$src"/*; do
+        [ -f "$lib" ] && ln -sf "$lib" "$dest/"
+    done
+}
+
+# Link EGL and HW libs
+link_libs "/cust/gpu/lib64/egl" "/vendor/lib64/egl"
+link_libs "/cust/gpu/lib64/hw" "/vendor/lib64/hw"
+
+# Link framework shared libs
+if [ -d "/cust/gpu/lib64" ]; then
+    for lib in /cust/gpu/lib64/*; do
+        if [ -f "$lib" ]; then
+            file_name="${lib##*/}"
+            ln -sf "$lib" "/vendor/lib64/$file_name"
+            ln -sf "$lib" "/system/lib64/$file_name"
+        fi
+    done
+fi
+
+# set device node permissions
+for node in /dev/kgsl-3d0 /dev/dri/card0 /dev/dri/renderD128; do
+    if [ -e "$node" ]; then
+        chmod 0666 "$node"
+    fi
+done
+
+if [ -e /dev/kgsl-3d0 ]; then
+    chown system:graphics /dev/kgsl-3d0
+fi

@@ -1,0 +1,11 @@
+# Copyright (C) 2026 AERA Recovery Project contributors
+# SPDX-License-Identifier: Apache-2.0
+
+service aera-gralloc /vendor/bin/hw/vendor.qti.hardware.display.allocator-service
+    class hal
+    user root
+    group root graphics drmrpc
+    seclabel u:r:recovery:s0
+    interface android.hardware.graphics.allocator@3.0::IAllocator default
+    interface android.hardware.graphics.allocator@4.0::IAllocator default
+    setenv LD_LIBRARY_PATH /cust/gpu/lib64:/cust/gpu/lib64/egl:/vendor/lib64:/system/lib64

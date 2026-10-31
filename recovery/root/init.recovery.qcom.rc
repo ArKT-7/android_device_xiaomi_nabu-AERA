@@ -27,6 +27,7 @@
 
 import /init.recovery.qcom_decrypt.rc
 import /init.recovery.wifi.rc
+import /vendor/etc/init/aera-gralloc.rc
 
 on init
     write /sys/class/backlight/panel0-backlight/brightness 200
@@ -41,6 +42,17 @@ on fs
     chown root system /dev/fscklogs/log
     chmod 0770 /dev/fscklogs/log
     start boot-hal-1-1
+
+    # check, expand, and mount cust partition for GPU libs and AERA settings
+    mkdir /cust 0775 root system
+    wait /dev/block/bootdevice/by-name/cust 3
+    exec u:r:recovery:s0 root root -- /system/bin/e2fsck -fy /dev/block/bootdevice/by-name/cust
+    exec u:r:recovery:s0 root root -- /system/bin/resize2fs /dev/block/bootdevice/by-name/cust
+    mount ext4 /dev/block/bootdevice/by-name/cust /cust nosuid nodev noatime
+
+    # setup GPU libs and bins if present in /cust/gpu
+    exec u:r:recovery:s0 root root -- /system/bin/qcom_gpu_init
+    start aera-gralloc
 
 on boot
     start health-hal-2-1
