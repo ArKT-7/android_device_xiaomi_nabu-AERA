@@ -1,0 +1,63 @@
+#!/system/bin/sh
+# Copyright (C) 2026 AERA Recovery Project contributors
+# SPDX-License-Identifier: Apache-2.0
+# Initializes Hexagon ADSP and quad-speaker audio from /cust partition
+
+export PATH=/system/bin:/sbin:/vendor/bin
+
+# if audio is already initialized and sound card is up, we are good to go
+if [ "$(getprop sys.aera.audio.ready)" = "1" ] && [ -e /dev/snd/controlC0 ]; then
+    exit 0
+fi
+
+if [ ! -d /cust/audio ]; then
+    exit 1
+fi
+
+# create necesary firmware directroies
+mkdir -p /system/etc/firmware /vendor/firmware
+
+# symlink ADSP and speaker DSP firmware
+if [ -d /cust/audio/firmware ]; then
+    for fw in /cust/audio/firmware/*; do
+        [ -f "$fw" ] || continue
+        file_name="${fw##*/}"
+        ln -sf "$fw" "/system/etc/firmware/$file_name"
+        ln -sf "$fw" "/vendor/firmware/$file_name"
+    done
+fi
+
+# boot Hexagon ADSP if sound card is not registered yet
+if [ ! -e /dev/snd/controlC0 ]; then
+    i=0
+    while [ ! -e /sys/kernel/boot_adsp/boot ] && [ $i -lt 50 ]; do
+        sleep 0.1
+        i=$((i+1))
+    done
+
+    if [ -e /sys/kernel/boot_adsp/boot ]; then
+        echo 1 > /sys/kernel/boot_adsp/boot 2>/dev/null
+    fi
+
+    # wait for ALSA sound card to register (up to 15 seconds)
+    i=0
+    while [ ! -e /dev/snd/controlC0 ] && [ $i -lt 150 ]; do
+        sleep 0.1
+        i=$((i+1))
+    done
+fi
+
+# abort if sound card failed to appaer
+if [ ! -e /dev/snd/controlC0 ]; then
+    exit 1
+fi
+
+# set sound device node permissions
+chmod 0660 /dev/snd/*
+chown system:audio /dev/snd/*
+
+# confgure quad-speaker amplifiers and mixer routing
+/system/bin/aera-audio-bridge --prepare || exit 1
+
+# mark audio backend as ready
+setprop sys.aera.audio.ready 1

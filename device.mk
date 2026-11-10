@@ -37,7 +37,8 @@ PRODUCT_PACKAGES += \
     libz \
     libcutils \
     bootctl \
-    update_engine_client
+    update_engine_client \
+    aera-audio-bridge
 
 RECOVERY_LIBRARY_SOURCE_FILES += \
     $(TARGET_OUT_SHARED_LIBRARIES)/libion.so

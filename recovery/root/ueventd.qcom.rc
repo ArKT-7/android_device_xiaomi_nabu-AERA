@@ -28,7 +28,7 @@
 # Firmware directory Path
 # Below macro will be read by uevent and path will
 # be added to search path for firmware loading
-firmware_directories /cust/gpu/firmware/ /vendor/firmware_mnt/image/ /system/etc/firmware/ /vendor/firmware/
+firmware_directories /cust/gpu/firmware/ /cust/audio/firmware/ /vendor/firmware_mnt/image/ /system/etc/firmware/ /vendor/firmware/
 
 # the DIAG device node is not world writable/readable.
 /dev/diag                 0660   system     oem_2901

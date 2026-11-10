@@ -34,7 +34,7 @@ if [ "$AERA_BUILD_DEVICE" = "$FDEVICE" ]; then
 	export AERA_USE_GREP_BINARY=1
 	export AERA_SETTINGS_ROOT_DIRECTORY="/cust"
 	export AERA_ALLOW_EARLY_SETTINGS_LOAD=1
-	for p in build-make; do
+	for p in build-make bootable-recovery; do
 		if patch -p1 -N --dry-run < device/xiaomi/nabu/patches/$p.patch; then
 			patch -p1 -N < device/xiaomi/nabu/patches/$p.patch
 		fi

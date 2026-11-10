@@ -1,6 +1,6 @@
 # AERA Recovery - Custom Partition Data
 
-This folder contains extra drivers, libraries, and hardware blobs (for GPU) that AERA Recovery requires to operate with full hardware acceleration.
+This folder contains extra drivers, libraries, and hardware blobs (for GPU and Audio) that AERA Recovery requires to operate with full hardware acceleration.
 
 **Why are these files stored here?**
 The Xiaomi Pad 5 (nabu) does not have a dedicated recovery partition, instead the recovery lives inside the `boot.img` as a ramdisk right alongside the kernel.

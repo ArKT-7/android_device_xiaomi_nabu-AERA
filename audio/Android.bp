@@ -1,0 +1,35 @@
+// Copyright (C) 2026 AERA Recovery Project contributors
+// SPDX-License-Identifier: Apache-2.0
+
+cc_binary {
+    name: "aera-audio-bridge",
+    recovery: true,
+    srcs: ["aera_audio_bridge.cpp"],
+    static_libs: ["libaera_tinyalsa"],
+    cpp_std: "c++17",
+    cflags: [
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+    ],
+}
+
+cc_library_static {
+    name: "libaera_tinyalsa",
+    recovery: true,
+    srcs: [
+        "tinyalsa/src/mixer.c",
+        "tinyalsa/src/mixer_hw.c",
+        "tinyalsa/src/pcm.c",
+        "tinyalsa/src/pcm_hw.c",
+    ],
+    local_include_dirs: [
+        "tinyalsa/include",
+        "tinyalsa/src",
+    ],
+    export_include_dirs: ["tinyalsa/include"],
+    cflags: [
+        "-Werror",
+        "-Wno-macro-redefined",
+    ],
+}
